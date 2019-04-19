@@ -1,0 +1,21 @@
+select snapshot_date_key
+	  , events_client_id
+    , client_type
+    , billing_plan_currency_code
+    , billing_plan_financial_reporting_country_name
+    , full_date
+    , trial_start_date
+    , trial_end_date
+    , first_payment_date
+    , account_status_datetime
+    , events_top_status
+    , events_account_status
+    , events_account_status_detail
+    , events_account_event
+    , events_current_account_status_key
+    , account_key
+    , intuit_marketing_channel_key
+    , tsheets_marketing_channel_key
+-- lag(events_account_status_detail,1) over (order by events_client_id, account_status_datetime) as prev_account_status_detail
+from stage.snapshot_events_daily s1
+order by account_status_datetime asc
