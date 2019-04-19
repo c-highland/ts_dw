@@ -1,0 +1,35 @@
+with event_occurrence as (SELECT
+snapshot_date_key
+, client_id
+, account_status
+, row_number() over (partition by client_id, account_status order by snapshot_date_key) event_occurrence
+from enterprise_metrics.snapshot_enterprise_metrics_daily
+)
+SELECT
+s1.snapshot_date_key
+--, account_status
+--, count(*) 
+--, s1.billing_plan_financial_reporting_country_code
+, COUNT(DISTINCT CASE WHEN s1.account_status = 'GNS' then s1.client_id else null end) GNS
+, COUNT(DISTINCT CASE WHEN account_status_detail = 'win back' and to_char(account_status_datetime, 'yyyymmdd') = s1.snapshot_date_key then s1.client_id else null end) new_win_backs
+, COUNT(DISTINCT CASE WHEN s1.account_status in ('GNS', 'active', 'win back') then s1.client_id else null end) active_clients
+--, COUNT(DISTINCT CASE WHEN s1.account_status in ('active') then s1.client_id else null end) active_clients
+--, SUM(CASE WHEN s1.account_status = 'cancel' and to_char(account_status_datetime, 'yyyymmdd') = s1.snapshot_date_key then 1 else 0 end ) new_cancels
+, COUNT(DISTINCT CASE WHEN s1.account_status = 'cancel' and to_char(account_status_datetime, 'yyyymmdd') = s1.snapshot_date_key and event_occurrence = 1 then s1.client_id else null end ) new_cancels
+--, SUM(CASE WHEN s1.account_status = 'cancel' then 1 else 0 end) cancels
+, COUNT(DISTINCT CASE WHEN s1.account_status = 'cancel' then s1.client_id else null end) cancels
+--, SUM(CASE WHEN s1.account_status in ('GNS', 'active') then 1 else 0 end) - SUM(CASE WHEN s1.account_status = 'cancel' then 1 else 0 end) Total_Subscribers
+--, COUNT(DISTINCT CASE WHEN s1.account_status in ('GNS', 'active') then s1.client_id else null end) - COUNT(DISTINCT CASE WHEN s1.account_status = 'cancel' then s1.client_id else null end)  Total_Subscribers
+, COUNT(DISTINCT CASE WHEN s1.account_status in ('GNS', 'active') then s1.client_id else null end) - COUNT(DISTINCT CASE WHEN s1.account_status = 'cancel' and event_occurrence = 1 then s1.client_id else null end)  Total_Subscribers
+, SUM(CASE WHEN s1.account_status in ('GNS', 'active') then active_users else 0 end) - SUM(CASE WHEN s1.account_status = 'cancel' then active_users else 0 end) Total_Active_Users
+, SUM(CASE WHEN s1.account_status in ('GNS', 'active') then all_users else 0 end) - SUM(CASE WHEN s1.account_status = 'cancel' then all_users else 0 end) Total_All_Users
+, SUM(CASE WHEN s1.account_status in ('GNS', 'active') then account_value else 0 end) - SUM(CASE WHEN s1.account_status = 'cancel' then account_value else 0 end) Total_Account_Value
+, SUM(CASE WHEN s1.account_status in ('GNS', 'active') then usd_account_value else 0 end) - SUM(CASE WHEN s1.account_status = 'cancel' then usd_account_value else 0 end) Total_USD_Account_Value
+, SUM(CASE WHEN s1.account_status in ('GNS', 'active') then discount else 0 end) - SUM(CASE WHEN s1.account_status = 'cancel' then discount else 0 end) Total_Discount
+FROM enterprise_metrics.snapshot_enterprise_metrics_daily s1
+join event_occurrence 
+	on s1.snapshot_date_key = event_occurrence.snapshot_date_key
+	and s1.client_id = event_occurrence.client_id
+	and s1.account_status = event_occurrence.account_status
+group by 1--, 2
+order by 1 asc
